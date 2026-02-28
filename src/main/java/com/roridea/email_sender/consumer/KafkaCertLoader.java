@@ -4,7 +4,9 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Base64;
 
 @Component
@@ -18,15 +20,12 @@ public class KafkaCertLoader {
 
     @PostConstruct
     public void loadCerts() throws Exception {
+        createFileFromBase64(keystoreBase64, "/tmp/client.keystore.jks");
+        createFileFromBase64(truststoreBase64, "/tmp/client.truststore.jks");
+    }
 
-        byte[] truststoreBytes = Base64.getDecoder().decode(truststoreBase64);
-        try (FileOutputStream fos = new FileOutputStream("/tmp/client.truststore.jks")) {
-            fos.write(truststoreBytes);
-        }
-
-        byte[] keystoreBytes = Base64.getDecoder().decode(keystoreBase64);
-        try (FileOutputStream fos = new FileOutputStream("/tmp/client.keystore.jks")) {
-            fos.write(keystoreBytes);
-        }
+    private void createFileFromBase64(String base64, String path) throws IOException {
+        byte[] decoded = Base64.getDecoder().decode(base64);
+        Files.write(Paths.get(path), decoded);
     }
 }
