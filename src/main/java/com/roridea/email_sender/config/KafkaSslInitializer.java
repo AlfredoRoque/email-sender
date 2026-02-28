@@ -3,8 +3,8 @@ package com.roridea.email_sender.config;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.FileOutputStream;
+import java.nio.file.Path;
 import java.util.Base64;
 
 /**
@@ -16,13 +16,25 @@ public class KafkaSslInitializer implements ApplicationContextInitializer<Config
     @Override
     public void initialize(ConfigurableApplicationContext context) {
         try {
-            // Keystore
-            String keystoreBase64 = System.getenv("KAFKA_KEYSTORE_BASE64");
-            Files.write(Paths.get("/tmp/client.keystore.jks"), Base64.getDecoder().decode(keystoreBase64));
+            String tmpDir = System.getProperty("java.io.tmpdir");
 
-            // Truststore
+            // Decodifica truststore
             String truststoreBase64 = System.getenv("KAFKA_TRUSTSTORE_BASE64");
-            Files.write(Paths.get("/tmp/client.truststore.jks"), Base64.getDecoder().decode(truststoreBase64));
+            Path truststorePath = Path.of(tmpDir, "client.truststore.jks");
+            try (FileOutputStream fos = new FileOutputStream(truststorePath.toFile())) {
+                fos.write(Base64.getDecoder().decode(truststoreBase64));
+            }
+            System.setProperty("ssl.truststore.location", truststorePath.toString());
+
+            // Decodifica keystore
+            String keystoreBase64 = System.getenv("KAFKA_KEYSTORE_BASE64");
+            Path keystorePath = Path.of(tmpDir, "client.keystore.jks");
+            try (FileOutputStream fos = new FileOutputStream(keystorePath.toFile())) {
+                fos.write(Base64.getDecoder().decode(keystoreBase64));
+            }
+            System.setProperty("ssl.keystore.location", keystorePath.toString());
+
+            System.out.println("Kafka SSL files created at: " + tmpDir);
         } catch (Exception e) {
             throw new RuntimeException("Failed to create Kafka SSL files", e);
         }
